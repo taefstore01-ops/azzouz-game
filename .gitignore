@@ -1,0 +1,2 @@
+# The game loads the models from models/*.js; the raw .glb copies are not needed online.
+models/*.glb
