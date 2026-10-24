@@ -2188,6 +2188,17 @@ function jump() {
 }
 
 /** Forward somersault that lasts about as long as the jump is in the air. */
+/** Star flash and sparks when the runner pops out of a roll. */
+function rollBurst() {
+  const y = player.y + 0.8;
+  emit('add', player.x, y, 0.1, 0xfff6c8, { life: 0.2, s0: 1.4, s1: 2.8, alpha: 0.9 });
+  for (let i = 0; i < 14; i++) {
+    const a = i / 14 * Math.PI * 2;
+    emit('add', player.x, y, 0.1, i % 2 ? 0xffd23f : 0xffffff,
+      { vx: Math.cos(a) * 3.2, vy: Math.sin(a) * 3.2, vz: rand(-0.5, 0.5), life: 0.32, s0: 0.45, s1: 0.05, alpha: 1 });
+  }
+}
+
 function startFlip() {
   player.flipping = true;
   player.flipT = 0;
@@ -2197,6 +2208,7 @@ function startFlip() {
 function roll() {
   if (player.jetpack > 0) return;
   player.rolling = ROLL_TIME;
+  player.rollPopped = false;
   player.flipping = false;
   if (!player.onGround) player.vy = Math.min(player.vy, -22);   // slam down
   sfx('roll');
@@ -2582,7 +2594,7 @@ function animateRunner(dt, t) {
   r.root.position.set(inShowroom ? 0 : player.x, (inShowroom ? PEDESTAL_TOP : player.y) + lift, 0);
   boardMesh.visible = onBoard;
   r.jet.visible = player.jetpack > 0 && !inShowroom;
-  r.body.scale.y = 1;
+  r.body.scale.set(1, 1, 1);
   r.body.rotation.x = 0;
   r.body.position.y = 0;
   r.armL.rotation.z = r.armR.rotation.z = 0;
@@ -2633,12 +2645,19 @@ function animateRunner(dt, t) {
       f.glow.material.opacity = 0.6 + Math.random() * 0.4;
     });
   } else if (player.rolling > 0 && player.onGround) {
-    // Tuck into a ball and roll forward around the waist (turning around the feet sank the body into the ground).
-    const p = 1 - player.rolling / ROLL_TIME;
-    r.body.scale.y = 0.55;
-    r.body.position.y = 0.5;
-    rollTurn = -p * Math.PI * 2;
-    r.root.position.y -= 0.55;
+    // Subway Surfers-style roll: snap into a tight ball low on the ground, two fast forward spins
+    // around the waist, then pop back up with a flash.
+    const p = 1 - player.rolling / ROLL_TIME;                 // 0 → 1 over the roll
+    const tuck = Math.min(1, p / 0.1), open = p > 0.75 ? (p - 0.75) / 0.25 : 0;
+    const k = tuck * (1 - open * open);                       // 0 = standing, 1 = full ball
+    r.body.scale.set(1 - 0.42 * k, 1 - 0.5 * k, 1 - 0.42 * k);
+    r.body.position.y = 0.57 * k;                             // keeps the ball centred on the spin pivot
+    rollTurn = -clamp((p - 0.04) / 0.7, 0, 1) * Math.PI * 4;
+    r.root.position.y -= 0.62 * k;
+    if (open > 0 && !player.rollPopped) {
+      player.rollPopped = true;
+      rollBurst();
+    }
     r.legL.rotation.x = r.legR.rotation.x = -1.2;
     r.armL.rotation.x = r.armR.rotation.x = -1.2;
   } else if (airborne) {
