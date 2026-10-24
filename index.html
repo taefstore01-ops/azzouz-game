@@ -1767,7 +1767,6 @@ function driveModel(r, dt, inShowroom, airborne, onBoard) {
   if (dead || flying) want = 'jump';
   else if (!inShowroom && (game.state === 'playing' || game.state === 'paused')) {
     if (airborne) want = 'jump';
-    else if (player.rolling > 0 && m.actions.slide) want = 'slide';
     else if (onBoard) want = 'idle';
     else { want = 'run'; rate = clamp(game.speed / 13, 1.0, 1.9); }
   }
@@ -1787,18 +1786,13 @@ function driveModel(r, dt, inShowroom, airborne, onBoard) {
     action.enabled = true;
     action.time = dead ? 0.5 : 0.35;   // skip the crouch: the body is already off the ground
   }
-  if (want === 'slide' && switching) action.time = SLIDE_CLIP.start;
-  if (want === 'slide') action.timeScale = SLIDE_CLIP.length / ROLL_TIME;
-  else if (dead) action.timeScale = game.deadT < 0.75 ? 0.9 : 0;   // arms flail while knocked back, then rest
+  if (dead) action.timeScale = game.deadT < 0.75 ? 0.9 : 0;   // arms flail while knocked back, then rest
   else if (flying) { action.time = 0.95; action.timeScale = 0; }  // hold the mid-air pose under the jetpack
   else action.timeScale = want === 'jump' ? 1.6 : rate;
   r.deathAnim = dead;
   m.mixer.update(dt);
   r.wasAir = airborne;
 }
-
-/* The low part of Sadan's slide clip (from Text2Motion), played over one roll. */
-const SLIDE_CLIP = { start: 0.55, length: 1.1 };
 
 let R = null;            // current runner parts
 let boardMesh = null;
@@ -2594,6 +2588,7 @@ function animateRunner(dt, t) {
   r.armL.rotation.z = r.armR.rotation.z = 0;
   r.body.visible = !(player.invuln > 0 && game.state === 'playing' && Math.floor(t * 12) % 2 === 0);
   const airborne = !player.onGround && game.state === 'playing';
+  let rollTurn = 0;
   const dead = game.state === 'dying' || game.state === 'over';
   if (r.model) driveModel(r, dt, inShowroom, airborne, onBoard);
 
@@ -2637,13 +2632,13 @@ function animateRunner(dt, t) {
       f.outer.material.color.setHSL((t * 1.5 + i * 0.25) % 1, 1, 0.55);
       f.glow.material.opacity = 0.6 + Math.random() * 0.4;
     });
-  } else if (player.rolling > 0 && player.onGround && r.model && r.model.actions.slide) {
-    r.body.scale.y = 0.82;                                     // the clip does the slide; just keep under the bar
   } else if (player.rolling > 0 && player.onGround) {
+    // Tuck into a ball and roll forward around the waist (turning around the feet sank the body into the ground).
     const p = 1 - player.rolling / ROLL_TIME;
     r.body.scale.y = 0.55;
-    r.body.position.y = 0.35;
-    r.body.rotation.x = -p * Math.PI * 2;
+    r.body.position.y = 0.5;
+    rollTurn = -p * Math.PI * 2;
+    r.root.position.y -= 0.55;
     r.legL.rotation.x = r.legR.rotation.x = -1.2;
     r.armL.rotation.x = r.armR.rotation.x = -1.2;
   } else if (airborne) {
@@ -2675,7 +2670,7 @@ function animateRunner(dt, t) {
     const k = Math.min(1, player.flipT / player.flipDur);
     r.flip.rotation.x = -(k * k * (3 - 2 * k)) * Math.PI * 2;
   } else {
-    r.flip.rotation.x = 0;
+    r.flip.rotation.x = rollTurn;
   }
   if (r.capePivot) r.capePivot.rotation.x = inShowroom ? 0.08 : 0.5 + Math.sin(t * 14) * 0.12 + (airborne ? 0.4 : 0);
   if (r.wings) {
