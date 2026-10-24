@@ -581,7 +581,7 @@ const CHARACTERS = [
     desc: 'عدّاء ترانسلفانيا – الإصدار الأصلي', perk: 'انزلاق سرب الخفافيش', perkInfo: '(يجذب العملات القريبة ويطفو في الهواء)', cost: null,
     look: { style: 'hoodie', face: 'azzouz', skin: 0xc4906c, hair: 0x110c10, mask: { x: 0.5, y: 0.5, rx: 0.46, ry: 0.56 } } },
   { id: 'sadan', name: 'سدن', face: '👧', art: 'sadan', tier: 'Mythic', tierLabel: 'أسطوري · إصدار خاص',
-    desc: 'عدّاءة ترانسلفانيا – الإصدار المسحور', perk: 'بريق الزمرّد', perkInfo: '(قفزة مزدوجة وفوانيس قرع أكثر بـ 25%)', cost: null,
+    desc: 'عدّاءة ترانسلفانيا – الإصدار المسحور', perk: 'بريق الزمرّد', perkInfo: '(تجذب العملات، وقفزة مزدوجة، وفوانيس قرع أكثر بـ 25%)', cost: null,
     look: { style: 'dress', face: 'sadan', skin: 0xb98163, hair: 0x1c120d, mask: { x: 0.5, y: 0.48, rx: 0.42, ry: 0.52 } } },
 ];
 const BOARDS = [
@@ -2316,7 +2316,7 @@ function checkCollisions() {
 
 function collect(t) {
   const cy = player.y + 0.9;
-  const magnet = perk() === 'azzouz';   // Bat Swarm Glide
+  const magnet = perk() === 'azzouz' || perk() === 'sadan';   // Bat Swarm Glide and Emerald Starlight both pull coins in
   for (let i = coins.length - 1; i >= 0; i--) {
     const c = coins[i];
     if (magnet && c.z > -7 && c.z < 1 && Math.abs(c.x - player.x) < 3 && Math.abs(c.y - cy) < 2.5) {
