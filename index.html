@@ -199,6 +199,9 @@
   .roster-head span:last-child { color: #a78bfa; font-weight: 700; text-transform: none; letter-spacing: 0; }
   .roster { display: flex; gap: 10px; overflow-x: auto; padding: 8px 2px 6px; scrollbar-width: none; pointer-events: auto; touch-action: pan-x; }
   .roster::-webkit-scrollbar { display: none; }
+  .shop-hint { text-align: center; font-size: 12px; font-weight: 700; color: #fde68a; margin: 2px 0 4px; min-height: 16px; }
+  .st.soon { background: #312e3f; color: #c4b5fd; }
+  .card.soon .face { filter: grayscale(1) brightness(.45); font-size: 30px; }
   .card {
     flex: none; width: 96px; border-radius: 16px; padding: 6px; display: flex; flex-direction: column; align-items: center; gap: 3px;
     background: linear-gradient(180deg, #2a133d, #12071f); border: 2px solid rgba(139,92,246,.4); cursor: pointer; position: relative;
@@ -255,6 +258,10 @@
   }
   .score small { display: block; font-size: 10px; font-weight: 800; letter-spacing: .1em; color: #fb923c; text-transform: uppercase; line-height: 1.1; }
   .score b { font-size: clamp(22px, 6vw, 28px); font-weight: 900; letter-spacing: -.01em; text-shadow: 0 2px 4px rgba(0,0,0,.9); }
+  .lvl { display: flex; align-items: center; gap: 7px; background: rgba(0,0,0,.6); border: 2px solid rgba(0,255,157,.55);
+    border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 900; color: #a7f3d0; }
+  .lvl i { display: block; width: 64px; height: 7px; border-radius: 9px; background: rgba(255,255,255,.15); overflow: hidden; }
+  .lvl b { display: block; height: 100%; width: 0; border-radius: 9px; background: linear-gradient(90deg, #00ff9d, #fde68a); }
   .hud-coins { background: rgba(0,0,0,.75); border: 2px solid rgba(251,191,36,.6); border-radius: 999px; padding: 3px 5px 3px 12px; display: flex; align-items: center; gap: 8px; }
   .hud-coins b { font-size: 17px; font-weight: 900; color: var(--gold); }
 
@@ -296,7 +303,7 @@
   }
   .banner {
     position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) skewX(-6deg) scale(.6); opacity: 0;
-    font-size: clamp(56px, 16vw, 110px); color: var(--mint); pointer-events: none; transition: transform .25s, opacity .25s;
+    font-size: clamp(48px, 14vw, 104px); color: var(--mint); pointer-events: none; transition: transform .25s, opacity .25s; white-space: nowrap;
   }
   .banner.show { opacity: 1; transform: translate(-50%, -50%) skewX(-6deg) scale(1); }
 
@@ -389,7 +396,7 @@
       </div>
     </div>
     <div class="cta">
-      <button class="btn purple grow" id="toWardrobe">👕 غرفة الملابس</button>
+      <button class="btn purple grow" id="toWardrobe">🛒 المتجر</button>
       <button class="btn green play" id="playBtn"><span class="stack"><small>اركض</small>العب ▶</span></button>
     </div>
     <div class="hint"><kbd>←</kbd><kbd>→</kbd> المسارات · <kbd>↑</kbd> قفز · <kbd>↓</kbd> انزلاق · <kbd>Space</kbd> اللوح الطائر · على الجوال: اسحب، وانقر مرتين للوح</div>
@@ -428,6 +435,7 @@
     </div>
     <div class="roster-head"><span>👥 أبطال ترانسلفانيا</span><span id="rosterCount"></span></div>
     <div class="roster" id="roster"></div>
+    <div class="shop-hint" id="shopHint"></div>
     <div class="cta" style="pointer-events:auto">
       <button class="btn purple grow" id="equipBtn">اختيار</button>
       <button class="btn green play" id="wPlayBtn"><span class="stack"><small>اركض</small>العب ▶</span></button>
@@ -447,6 +455,7 @@
         <div class="best-mini">👑 <span class="num" id="bestMini">0</span></div>
         <div class="score"><small>النقاط</small><b class="num" id="score">000,000</b></div>
       </div>
+      <div class="lvl"><span id="lvlText">المستوى 1</span><i><b id="lvlBar"></b></i></div>
       <div class="hud-coins"><b class="num" id="coins">0</b><span class="coin-ico">★</span></div>
     </div>
   </div>
@@ -494,13 +503,13 @@
     <div class="stats">
       <div class="stat"><i>🏃</i><span>المسافة</span><b class="num" id="finalDist">0m</b></div>
       <div class="stat"><i>🪙</i><span>العملات</span><b class="num" id="finalCoins" style="color:#fcd34d">0</b></div>
-      <div class="stat"><i>⚡</i><span>المضاعِف</span><b class="num" id="finalMult" style="color:#67e8f9">x1</b></div>
+      <div class="stat"><i>⚡</i><span>المستوى</span><b class="num" id="finalMult" style="color:#67e8f9">1</b></div>
     </div>
     <button class="btn teal save" id="saveBtn">✚ أنقذني! <span class="side" id="saveCost"></span></button>
     <button class="btn orange" id="againBtn">↻ العب مجدداً</button>
     <div class="toolbar">
       <button id="overHome"><i>🏰</i>الرئيسية</button>
-      <button id="overWardrobe"><i>👕</i>غرفة الملابس</button>
+      <button id="overWardrobe"><i>🛒</i>المتجر</button>
     </div>
   </div>
 </section>
@@ -532,7 +541,12 @@ const JET_Y = 8;                  // jetpack cruising height
 const JUMP_V = 13.5, GRAVITY = 34;
 const FLIP_PIVOT = 1.1;   // body-space height the somersault turns around (about the waist)
 const STAND_H = 1.7, ROLL_H = 0.8, ROLL_TIME = 0.7;
-const START_SPEED = 15, MAX_SPEED = 34, ACCEL = 0.22;
+const START_SPEED = 15, MAX_SPEED = 34;
+/* Levels: each one needs more points than the last (500, 1500, 3000, 5000, ...).
+   A new level raises the speed, the score multiplier and how often obstacles come. */
+const LEVEL_STEP = 500, LEVEL_SPEED = 2.6;
+const levelStart = n => LEVEL_STEP * n * (n - 1) / 2;   // score at which level n begins
+const levelOf = score => { let n = 1; while (score >= levelStart(n + 1)) n++; return n; };
 const SEG_LEN = 40, SEG_COUNT = 5;
 const SPAWN_AT = -150, DESPAWN = 14;
 const JET_TIME = 7, BOARD_TIME = 30, MULT_TIME = 12;
@@ -578,11 +592,13 @@ const persist = () => store.set(SAVE_KEY, save);
 /* Roster from the wardrobe design. Each runner has a perk that changes the run. */
 const CHARACTERS = [
   { id: 'azzouz', name: 'عزوز', face: '🧒', art: 'azzouz', tier: 'Mythic', tierLabel: 'أسطوري · إصدار خاص',
-    desc: 'عدّاء ترانسلفانيا – الإصدار الأصلي', perk: 'انزلاق سرب الخفافيش', perkInfo: '(يجذب العملات القريبة ويطفو في الهواء)', cost: null,
+    desc: 'عدّاء ترانسلفانيا – الإصدار الأصلي', perk: 'انزلاق سرب الخفافيش', perkInfo: '(يطفو في الهواء ويسقط أبطأ بعد القفز)', cost: null,
     look: { style: 'hoodie', face: 'azzouz', skin: 0xc4906c, hair: 0x110c10, mask: { x: 0.5, y: 0.5, rx: 0.46, ry: 0.56 } } },
   { id: 'sadan', name: 'سدن', face: '👧', art: 'sadan', tier: 'Mythic', tierLabel: 'أسطوري · إصدار خاص',
-    desc: 'عدّاءة ترانسلفانيا – الإصدار المسحور', perk: 'بريق الزمرّد', perkInfo: '(تجذب العملات، وقفزة مزدوجة، وفوانيس قرع أكثر بـ 25%)', cost: null,
+    desc: 'عدّاءة ترانسلفانيا – الإصدار المسحور', perk: 'بريق الزمرّد', perkInfo: '(قفزة مزدوجة وفوانيس قرع أكثر بـ 25%)', cost: null,
     look: { style: 'dress', face: 'sadan', skin: 0xb98163, hair: 0x1c120d, mask: { x: 0.5, y: 0.48, rx: 0.42, ry: 0.52 } } },
+  { id: 'soon1', name: 'شخصية جديدة', face: '❔', tier: 'Epic', tierLabel: 'قريباً', soon: true,
+    desc: 'شخصية جديدة ستصل قريباً إلى المتجر', perk: 'قدرة خاصة', perkInfo: '(تُكشف عند الإضافة)', cost: { coins: 500 } },
 ];
 const BOARDS = [
   { id: 'classic', name: 'كلاسيك منتصف الليل', face: '🛹', tier: 'Common', tierLabel: 'عادي', desc: 'لوح موثوق بتوهّج سماوي', perk: 'درع', perkInfo: '(يصدّ اصطداماً واحداً)', cost: null, deck: 0x2a1a4a, glow: 0x49f2ff, shields: 1 },
@@ -594,7 +610,7 @@ const boardDef = id => BOARDS.find(b => b.id === id) || BOARDS[0];
 const ART = Object.assign({}, window.TRS_ART, window.TRS_ART_EXTRA);
 const faceHTML = item => item.art && ART[item.art] ? `<img src="${ART[item.art].thumb}" alt="">` : item.face;
 // Both runners are free; saves from the older roster fall back to Azzouz.
-save.chars = CHARACTERS.map(c => c.id);
+save.chars = [...new Set([...save.chars, ...CHARACTERS.filter(c => !c.cost).map(c => c.id)])];
 if (save.char === 'amira') save.char = 'sadan';
 if (!WORLDS[save.world]) save.world = 'transylvania';
 if (!CHARACTERS.some(c => c.id === save.char)) save.char = 'azzouz';
@@ -2083,7 +2099,7 @@ function spawnRow(z) {
   let pattern = 'barriers';
   if (!early) {
     if (r < 0.4) pattern = 'trains';
-    else if (r < 0.58 && reserved.length === 0) pattern = 'moving';
+    else if (r < Math.min(0.72, 0.52 + game.level * 0.03) && reserved.length === 0) pattern = 'moving';
   }
 
   if (pattern === 'moving') {
@@ -2127,7 +2143,7 @@ function spawnRow(z) {
 /* =========================================================================
    Game state
    ========================================================================= */
-const game = { state: 'lobby', speed: START_SPEED, distance: 0, score: 0, coins: 0, time: 0, shake: 0, deadT: 0, maxMult: 1, revives: 0, newBest: false };
+const game = { state: 'lobby', speed: START_SPEED, level: 1, distance: 0, score: 0, coins: 0, time: 0, shake: 0, deadT: 0, maxMult: 1, revives: 0, newBest: false };
 const player = {
   lane: 1, prevLane: 1, x: 0, y: 0, vy: 0, onGround: true, onRoof: false, airJumps: 0,
   rolling: 0, jetpack: 0, jetMax: JET_TIME, board: 0, boardMax: BOARD_TIME, shields: 0, boards: 3,
@@ -2140,7 +2156,7 @@ const board = () => boardDef(save.board);
 
 function resetRun() {
   clearWorld();
-  Object.assign(game, { speed: START_SPEED, distance: 0, score: 0, coins: 0, shake: 0, deadT: 0, maxMult: 1, revives: 0, newBest: false });
+  Object.assign(game, { speed: START_SPEED, level: 1, distance: 0, score: 0, coins: 0, shake: 0, deadT: 0, maxMult: 1, revives: 0, newBest: false });
   Object.assign(player, {
     lane: 1, prevLane: 1, x: 0, y: 0, vy: 0, onGround: true, onRoof: false, airJumps: 0,
     rolling: 0, jetpack: 0, board: 0, shields: 0, boards: 3, mult2: 0, invuln: 0, stumble: 0, stumbles: 0, flipping: false,
@@ -2154,7 +2170,15 @@ function resetRun() {
 }
 
 function multiplier() {
-  return Math.min(6, 1 + Math.floor(game.distance / 450)) * (player.mult2 > 0 ? 2 : 1);
+  return Math.min(6, game.level) * (player.mult2 > 0 ? 2 : 1);
+}
+
+function checkLevel() {
+  const n = levelOf(game.score);
+  if (n <= game.level) return;
+  game.level = n;
+  banner('المستوى ' + n);
+  sfx('power');
 }
 
 /* =========================================================================
@@ -2316,15 +2340,8 @@ function checkCollisions() {
 
 function collect(t) {
   const cy = player.y + 0.9;
-  const magnet = perk() === 'azzouz' || perk() === 'sadan';   // Bat Swarm Glide and Emerald Starlight both pull coins in
   for (let i = coins.length - 1; i >= 0; i--) {
     const c = coins[i];
-    if (magnet && c.z > -7 && c.z < 1 && Math.abs(c.x - player.x) < 3 && Math.abs(c.y - cy) < 2.5) {
-      c.x += (player.x - c.x) * 0.25;                      // Bat Glide: pull nearby coins in
-      c.y += (cy - c.y) * 0.25;
-      c.mesh.position.x = c.x;
-      c.mesh.position.y = c.y;
-    }
     if (Math.abs(c.x - player.x) < 0.95 && Math.abs(c.z) < 0.9 && Math.abs(c.y - cy) < 1.3) {
       removeAt(coins, i);
       game.coins++;
@@ -2507,16 +2524,18 @@ function tick(dt) {
   let dz = 0;
 
   if (game.state === 'playing') {
-    game.speed = Math.min(MAX_SPEED, game.speed + ACCEL * dt);
+    const targetSpeed = Math.min(MAX_SPEED, START_SPEED + (game.level - 1) * LEVEL_SPEED);
+    game.speed += clamp(targetSpeed - game.speed, -3 * dt, 3 * dt);   // ease up to the level's speed
     dz = game.speed * dt;
     game.distance += dz;
     game.score += dz * multiplier();
     game.maxMult = Math.max(game.maxMult, multiplier());
+    checkLevel();
     moveWorld(dz, dt);
     spawner.cursor += dz;
     while (spawner.cursor > SPAWN_AT) {
       spawnRow(spawner.cursor);
-      spawner.cursor -= rand(24, 34);
+      spawner.cursor -= rand(24, 34) - Math.min(9, (game.level - 1) * 1.5);   // rows come closer each level
     }
     updatePlayer(dt);
     checkCollisions();
@@ -2766,6 +2785,9 @@ function updateHud() {
   setText('score', fmtScore(game.score));
   setText('coins', fmt(game.coins));
   setText('mult', '×' + multiplier());
+  setText('lvlText', 'المستوى ' + game.level);
+  const lo = levelStart(game.level), hi = levelStart(game.level + 1);
+  $('lvlBar').style.width = (clamp((game.score - lo) / (hi - lo), 0, 1) * 100).toFixed(1) + '%';
   setText('bestMini', fmtScore(Math.max(save.best, game.score)));
   setText('keysHud', String(save.keys));
   setText('boardCount', String(player.boards));
@@ -2868,7 +2890,7 @@ function showOver() {
   $('finalSub').textContent = 'انتهت الجولة في ' + (WORLDS[save.world] || WORLDS.transylvania).name;
   $('finalDist').textContent = fmt(game.distance) + ' م';
   $('finalCoins').textContent = fmt(game.coins);
-  $('finalMult').textContent = '×' + game.maxMult;
+  $('finalMult').textContent = String(game.level);
   $('record').classList.toggle('on', game.newBest);
   const cost = 2 ** game.revives;
   $('saveCost').textContent = `🔑 ${cost} ${cost > 1 ? 'مفاتيح' : 'مفتاح'} (لديك ${save.keys})`;
@@ -2907,7 +2929,7 @@ function renderWardrobe() {
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === showroom.tab));
   const list = items();
   const item = list.find(i => i.id === viewing) || list[0];
-  if (showroom.tab === 'chars') setRunner(item.id, save.board);
+  if (showroom.tab === 'chars') setRunner(item.soon ? save.char : item.id, save.board);
   else setRunner(save.char, item.id);
 
   const ab = boardDef(showroom.tab === 'boards' ? viewing : save.board);
@@ -2923,16 +2945,22 @@ function renderWardrobe() {
   if (art) $('wardArt').style.backgroundImage = `url(${art.full})`;
   $('spinBtn').textContent = showroom.tab === 'chars' ? (showroom.view3d ? '🖼 الصورة' : '⟲ مجسّم ثلاثي الأبعاد') : '⟲ عرض 360°';
   $('spinBtn').classList.toggle('on', showroom.tab === 'chars' ? showroom.view3d : showroom.spin);
-  const ownedCount = list.filter(i => owned(i.id)).length;
-  $('rosterCount').textContent = `${ownedCount} / ${list.length} مفتوحة`;
+  const real = list.filter(i => !i.soon);
+  const ownedCount = real.filter(i => owned(i.id)).length;
+  $('rosterCount').textContent = `${ownedCount} / ${real.length} مفتوحة`;
+  const next = real.filter(i => !owned(i.id) && i.cost && i.cost.coins).sort((a, b) => a.cost.coins - b.cost.coins)[0];
+  $('shopHint').textContent = next
+    ? (save.bank >= next.cost.coins ? `🎉 تستطيع فتح «${next.name}» الآن!` : `اجمع ${fmt(next.cost.coins - save.bank)} عملة أخرى لفتح «${next.name}»`)
+    : 'اجمع العملات أثناء الجري لتفتح الشخصيات الجديدة عند وصولها';
 
   $('roster').innerHTML = list.map(i => {
     const isOwned = owned(i.id), isEq = equippedId() === i.id;
-    const status = isEq ? '<span class="st eq">مُختار</span>'
+    const status = i.soon ? `<span class="st soon">قريباً · ${costText(i.cost)}</span>`
+      : isEq ? '<span class="st eq">مُختار</span>'
       : isOwned ? '<span class="st own">مملوك</span>'
       : canAfford(i.cost) ? `<span class="st buy">${costText(i.cost)}</span>`
       : `<span class="st lock">${costText(i.cost)}</span>`;
-    return `<div class="card ${i.id === viewing ? 'sel' : ''} ${isOwned ? '' : 'locked'}" data-id="${i.id}">
+    return `<div class="card ${i.id === viewing ? 'sel' : ''} ${isOwned ? '' : 'locked'} ${i.soon ? 'soon' : ''}" data-id="${i.id}">
       ${isEq ? '<span class="check">✓</span>' : ''}
       <div class="face">${faceHTML(i)}</div><div class="nm">${i.name}</div>${status}</div>`;
   }).join('');
@@ -2940,7 +2968,8 @@ function renderWardrobe() {
   const eq = $('equipBtn');
   eq.disabled = false;
   eq.className = 'btn grow';
-  if (equippedId() === item.id) { eq.textContent = '✓ مُختار'; eq.classList.add('gray'); eq.disabled = true; }
+  if (item.soon) { eq.textContent = 'قريباً'; eq.classList.add('gray'); eq.disabled = true; }
+  else if (equippedId() === item.id) { eq.textContent = '✓ مُختار'; eq.classList.add('gray'); eq.disabled = true; }
   else if (owned(item.id)) { eq.textContent = '⚡ اختر ' + item.name; eq.classList.add('purple'); }
   else if (canAfford(item.cost)) { eq.textContent = 'افتح ' + costText(item.cost); eq.classList.add('orange'); }
   else { eq.textContent = 'تحتاج ' + costText(item.cost); eq.disabled = true; }
@@ -2969,7 +2998,7 @@ document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click
 }));
 $('equipBtn').addEventListener('click', () => {
   const item = items().find(i => i.id === viewing);
-  if (!item) return;
+  if (!item || item.soon) return;
   if (!owned(item.id)) {
     if (!canAfford(item.cost)) return;
     if (item.cost.coins) save.bank -= item.cost.coins; else save.pumpkins -= item.cost.pumpkins;
